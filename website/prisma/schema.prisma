@@ -1,0 +1,201 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Company {
+  id           String      @id @default(cuid())
+  name         String
+  domain       String?   @unique
+  industry     String?
+  country      String?
+  region       String?
+  employees    String?
+  revenueRange String?
+  website      String?
+  linkedinUrl  String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  contacts     Contact[]
+  leadScores   LeadScore[]
+  emailLogs    EmailLog[]
+  rfqs         Rfq[]
+}
+
+model Contact {
+  id          String            @id @default(cuid())
+  companyId   String?
+  company     Company?          @relation(fields: [companyId], references: [id])
+  email       String            @unique
+  firstName   String?
+  lastName    String?
+  jobTitle    String?
+  phone       String?
+  source      String?
+  consentGdpr Boolean           @default(false)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  rfqs        Rfq[]
+  chats       ChatConversation[]
+  emailLogs   EmailLog[]
+  leadScores  LeadScore[]
+}
+
+model Rfq {
+  id           String     @id @default(cuid())
+  contactId    String
+  contact      Contact    @relation(fields: [contactId], references: [id])
+  companyId    String?
+  company      Company?   @relation(fields: [companyId], references: [id])
+  source       String     @default("quote_form")
+  status       String     @default("new")
+  priority     Int        @default(0)
+  projectName  String?
+  annualVolume Int?
+  targetPrice  Float?
+  deadline     DateTime?
+  materials    String[]
+  rawContent   Json?
+  aiSummary    String?
+  aiConfidence Float?
+  score        LeadScore?
+  items        RfqItem[]
+  quotes       Quote[]
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model RfqItem {
+  id                 String   @id @default(cuid())
+  rfqId              String
+  rfq                Rfq      @relation(fields: [rfqId], references: [id], onDelete: Cascade)
+  partName           String?
+  partNumber         String?
+  cavity             Int      @default(1)
+  steelGrade         String?
+  moldLife           String?
+  dimensions         Json?
+  tolerance          String?
+  surfaceFinish      String?
+  material           String?
+  annualVolume       Int?
+  moldPriceEstimate  Float?
+  drawingsAvailable  Boolean  @default(false)
+}
+
+model Quote {
+  id                String    @id @default(cuid())
+  rfqId             String
+  rfq               Rfq       @relation(fields: [rfqId], references: [id])
+  totalPrice        Float
+  leadTimeDays      Int
+  moldLifeGuarantee String?
+  status            String    @default("draft")
+  sentAt            DateTime?
+  createdAt         DateTime  @default(now())
+}
+
+model LeadScore {
+  id              String   @id @default(cuid())
+  companyId       String?
+  company         Company? @relation(fields: [companyId], references: [id])
+  contactId       String
+  contact         Contact  @relation(fields: [contactId], references: [id])
+  rfqId           String?  @unique
+  rfq             Rfq?     @relation(fields: [rfqId], references: [id])
+  score           Int      @default(0)
+  fitScore        Int      @default(0)
+  intentScore     Int      @default(0)
+  engagementScore Int      @default(0)
+  timingScore     Int      @default(0)
+  aiNotes         String?
+  scoredAt        DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model ChatConversation {
+  id        String        @id @default(cuid())
+  contactId String?
+  contact   Contact?      @relation(fields: [contactId], references: [id])
+  channel   String        @default("website")
+  status    String        @default("open")
+  intent    String?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  messages  ChatMessage[]
+}
+
+model ChatMessage {
+  id             String          @id @default(cuid())
+  conversationId String
+  conversation   ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           String
+  content        String
+  embedding      Float[]
+  createdAt      DateTime        @default(now())
+}
+
+model KnowledgeDoc {
+  id        String   @id @default(cuid())
+  category  String
+  title     String
+  content   String
+  embedding Float[]
+  sourceUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model EmailLog {
+  id          String    @id @default(cuid())
+  contactId   String?
+  contact     Contact?  @relation(fields: [contactId], references: [id])
+  companyId   String?
+  company     Company?  @relation(fields: [companyId], references: [id])
+  templateKey String
+  subject     String?
+  toEmail     String
+  status      String    @default("queued")
+  openedAt    DateTime?
+  createdAt   DateTime  @default(now())
+}
+
+model SeoKeyword {
+  id              String   @id @default(cuid())
+  keyword         String
+  intent          String
+  difficulty      Int?
+  volume          Int?
+  targetUrl       String?
+  status          String   @default("targeted")
+  currentPosition Int?
+  targetPosition  Int?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model ContentPage {
+  id        String   @id @default(cuid())
+  type      String
+  slug      String
+  title     String
+  excerpt   String   @default("")
+  body      String   @default("")
+  data      Json     @default("{}")
+  published Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([type, slug])
+  @@index([type, published])
+}
+
+model SystemSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}

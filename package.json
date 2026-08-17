@@ -1,36 +1,26 @@
 {
-  "name": "injection-mold-website",
-  "version": "0.1.0",
+  "name": "yongxin-mold-workspace",
+  "version": "1.0.0",
   "private": true,
+  "description": "勇鑫塑胶制品厂 - 网站与管理后台 (monorepo)",
+  "workspaces": [
+    "website",
+    "admin"
+  ],
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint",
-    "seed": "tsx prisma/seed.ts"
+    "dev:website": "npm run dev --workspace website",
+    "dev:admin": "npm run dev --workspace admin",
+    "build:website": "npm run build --workspace website",
+    "build:admin": "npm run build --workspace admin",
+    "build": "npm run build --workspaces",
+    "start:website": "npm run start --workspace website",
+    "start:admin": "npm run start --workspace admin",
+    "seed": "npm run seed --workspace website"
   },
-  "dependencies": {
-    "@prisma/adapter-pg": "^7.9.1",
-    "@prisma/client": "^7.9.1",
-    "next": "16.3.1",
-    "nodemailer": "^9.0.5",
-    "openai": "^7.4.0",
-    "react": "19.2.8",
-    "react-dom": "19.2.8",
-    "zod": "^4.4.3"
-  },
-  "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/nodemailer": "^8.0.1",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "dotenv": "^17.4.2",
-    "eslint": "^9",
-    "eslint-config-next": "16.3.1",
-    "prisma": "^7.9.1",
-    "tailwindcss": "^4",
-    "tsx": "^4.23.12",
-    "typescript": "^5"
+  "allowScripts": {
+    "@prisma/engines@7.9.1": true,
+    "esbuild@0.28.2": true,
+    "prisma@7.9.1": true,
+    "unrs-resolver@1.12.2": true
   }
 }

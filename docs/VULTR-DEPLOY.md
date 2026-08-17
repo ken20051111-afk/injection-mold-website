@@ -1,7 +1,10 @@
-# 小白级 Vultr 部署教程（本仓库项目）
+# 小白级 Vultr 部署教程（完整版）
 
-> 适用项目：MoldCraft 塑胶注塑模具工厂官网（Next.js 16 + PostgreSQL + Prisma + Nginx + PM2）
-> 面向新手，跟着每一步做就行。所有「带 `$` 的命令」都是在**服务器**上执行的，「带 `C:\>` 的命令」是在你自己的 **Windows** 电脑上执行的。
+> **本项目包含两个应用：**
+> - **官网** (`website/`) — 面向客户的 B2B 模具工厂网站，运行在 **端口 3000**
+> - **管理后台** (`admin/`) — 内容管理 + CRM 销售系统，运行在 **端口 3001**
+>
+> 本教程会把两个应用都部署到同一台服务器上。
 
 ---
 
@@ -267,14 +270,16 @@ git pull
 
 ## 第 8 步 配置环境变量 .env
 
-`.env` 不会被上传到 Git，所以要在**服务器上手动创建**。
+本项目有两个子应用，**两个都需要配置 `.env`**。`.env` 不会被上传到 Git，所以要在**服务器上手动创建**。
+
+### 8.1 官网的 .env
 
 ```bash
-cd /var/www/moldcraft
+cd /var/www/moldcraft/website
 nano .env
 ```
 
-把下面内容粘贴进去（把占位符改成你的真实信息）：
+粘贴下面内容（把占位符改成你的真实信息）：
 
 ```bash
 # 数据库（第 6 步创建的用户和密码）
@@ -301,13 +306,26 @@ WECOM_WEBHOOK_URL=""
 
 保存并退出（nano 编辑器）：按 `Ctrl + O` 回车保存，再按 `Ctrl + X` 退出。
 
+### 8.2 管理后台的 .env
+
+管理后台和官网用**同一个数据库**，所以 `.env` 内容几乎一样：
+
+```bash
+cd /var/www/moldcraft/admin
+nano .env
+```
+
+粘贴和上面**完全一样的内容**（和 `website/.env` 保持一致即可）。
+
+> 两个应用共享同一个 PostgreSQL 数据库，所以数据库连接串必须一样。
+
 > 注意：`DATABASE_URL` 里的密码如果含特殊字符（如 `@`、`:`、`#`），需要 URL 编码。为省事，数据库密码建议只用**字母+数字+下划线**。
 
 ---
 
 ## 第 9 步 安装依赖 + 建表 + 灌数据 + 构建
 
-进入项目目录，依次执行：
+进入项目根目录，依次执行：
 
 ```bash
 cd /var/www/moldcraft
@@ -319,11 +337,19 @@ cd /var/www/moldcraft
 npm install
 ```
 
+> 这是 monorepo 项目，一条命令会同时安装 `website/` 和 `admin/` 的所有依赖。
 > 如果这一步报内存不足或卡死，请给服务器加 Swap（虚拟内存），见[第 15 步常见问题 Q5](#q5-构建时内存不足报错)。
 
 **9.2 生成 Prisma 客户端并建表**：
 
+两个应用各有自己的 Prisma 配置，都需要执行：
+
 ```bash
+cd /var/www/moldcraft/website
+npx prisma generate
+npx prisma migrate deploy
+
+cd /var/www/moldcraft/admin
 npx prisma generate
 npx prisma migrate deploy
 ```
@@ -333,16 +359,24 @@ npx prisma migrate deploy
 **9.3 灌入内置内容（知识库、SEO 关键词等）**：
 
 ```bash
+cd /var/www/moldcraft
 npm run seed
 ```
 
-**9.4 构建生产版本**（第一次较慢，可能要几分钟）：
+**9.4 构建两个应用**：
 
 ```bash
+cd /var/www/moldcraft
 npm run build
 ```
 
-看到 `✓ Compiled successfully` 之类的绿色提示即成功。**先别关**，下一步运行它。
+看到两个应用都显示 `✓ Compiled successfully` 即成功。
+
+> 如果只想单独构建某一个：
+> ```bash
+> npm run build:website   # 只构建官网
+> npm run build:admin     # 只构建管理后台
+> ```
 
 ---
 
@@ -356,11 +390,16 @@ PM2 是一个进程管理器，保证网站崩了自动重启、服务器重启�
 npm install -g pm2
 ```
 
-**10.2 启动网站**（端口 3000）：
+**10.2 启动两个应用**：
 
 ```bash
-cd /var/www/moldcraft
-pm2 start npm --name moldcraft -- start -- --port 3000
+# 启动官网（端口 3000）
+cd /var/www/moldcraft/website
+pm2 start npm --name moldcraft-website -- start -- --port 3000
+
+# 启动管理后台（端口 3001）
+cd /var/www/moldcraft/admin
+pm2 start npm --name moldcraft-admin -- start -- --port 3001
 ```
 
 **10.3 设置开机自启 + 保存状态**（按提示把输出里的那行命令再复制执行一遍）：
@@ -376,23 +415,40 @@ pm2 save
 pm2 status
 ```
 
-`status` 是 `online` 就对了。现在可以先测一下：在**你自己电脑的浏览器**打开 `http://你的服务器IP:3000`，能打开官网就说明网站本体已经跑起来了 🎉。
+两个应用的 status 都是 `online` 就对了。
 
-> 没开域名和 80/443 端口前，用 `IP:3000` 访问即可。防火墙规则见[第 14 步](#第-14-步-打开防火墙)，请先别急着打开所有端口。
+现在可以先测一下：在**你自己电脑的浏览器**打开：
+
+| 应用 | 访问地址 |
+|---|---|
+| 官网 | `http://你的服务器IP:3000` |
+| 管理后台 | `http://你的服务器IP:3001` |
+| CRM 登录 | `http://你的服务器IP:3001/crm/login` |
+
+> 管理后台的 CRM 密码就是你第 8 步在 `.env` 里设的 `CRM_PASSWORD`。
+
+> 没开域名和 80/443 端口前，用 `IP:端口` 访问即可。防火墙规则见[第 14 步](#第-14-步-打开防火墙)，请先别急着打开所有端口。
 
 **常用 PM2 命令**：
 
 ```bash
-pm2 logs moldcraft       # 看运行日志
-pm2 restart moldcraft    # 重启
-pm2 stop moldcraft       # 停止
+pm2 logs moldcraft-website    # 看官网运行日志
+pm2 logs moldcraft-admin      # 看后台运行日志
+pm2 restart moldcraft-website # 重启官网
+pm2 restart moldcraft-admin   # 重启后台
+pm2 stop moldcraft-website    # 停止官网
+pm2 stop moldcraft-admin      # 停止后台
 ```
 
 ---
 
 ## 第 11 步 安装 Nginx（域名反向代理）
 
-Nginx 的作用：把 `80/443 端口` 的访问转发给内网的 `3000 端口`，这样访问者用 `http://你的域名` 就能打开网站，不用敲端口号。
+Nginx 的作用：把 `80/443 端口` 的访问转发给内网端口，这样访问者用域名就能打开网站，不用敲端口号。
+
+本项目需要两个域名/路径：
+- `yourdomain.com` → 官网（端口 3000）
+- `admin.yourdomain.com` → 管理后台（端口 3001）
 
 **11.1 安装**：
 
@@ -400,15 +456,16 @@ Nginx 的作用：把 `80/443 端口` 的访问转发给内网的 `3000 端口`�
 apt install -y nginx
 ```
 
-**11.2 创建站点配置**（把 `yourdomain.com` 换成你的域名）：
+**11.2 创建官网站点配置**：
 
 ```bash
 nano /etc/nginx/sites-available/moldcraft
 ```
 
-粘贴下面内容：
+粘贴下面内容（把 `yourdomain.com` 换成你的域名）：
 
 ```nginx
+# 官网（端口 80 → 3000）
 server {
     listen 80;
     server_name yourdomain.com www.yourdomain.com;
@@ -424,9 +481,44 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
+
+# 管理后台（端口 80 → 3001）
+server {
+    listen 80;
+    server_name admin.yourdomain.com;
+
+    client_max_body_size 20m;
+
+    location / {
+        proxy_pass http://127.0.0.1:3001;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
 ```
 
 保存退出（`Ctrl+O` 回车，`Ctrl+X`）。
+
+> **还没有域名？** 只需要一个 server 块，`server_name` 改成 `_`（匹配所有域名），然后用 `http://你的服务器IP` 访问官网，管理后台暂时用 `http://你的服务器IP:3001` 直接访问。
+>
+> ```nginx
+> server {
+>     listen 80;
+>     server_name _;
+>     client_max_body_size 20m;
+>     location / {
+>         proxy_pass http://127.0.0.1:3000;
+>         proxy_http_version 1.1;
+>         proxy_set_header Host $host;
+>         proxy_set_header X-Real-IP $remote_addr;
+>         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+>         proxy_set_header X-Forwarded-Proto $scheme;
+>     }
+> }
+> ```
 
 **11.3 启用配置**：
 
@@ -450,12 +542,13 @@ systemctl reload nginx
 
 ### 12.1 把域名解析到服务器 IP
 
-到你买域名的地方（阿里云/Cloudflare/Namecheap...），给域名添加两条 **A 记录**：
+到你买域名的地方（阿里云/Cloudflare/Namecheap...），给域名添加三条 **A 记录**：
 
-| 主机记录 | 记录类型 | 记录值 |
-|---|---|---|
-| `@`（或留空） | A | 你的服务器 IP |
-| `www` | A | 你的服务器 IP |
+| 主机记录 | 记录类型 | 记录值 | 用途 |
+|---|---|---|---|
+| `@`（或留空） | A | 你的服务器 IP | 官网主域名 |
+| `www` | A | 你的服务器 IP | 官网 www 子域名 |
+| `admin` | A | 你的服务器 IP | 管理后台 |
 
 > 在 Cloudflare 上操作时，代理状态选「仅 DNS / DNS only」（灰色云朵），因为后面要用 Certbot 签证书；等证书装好后再开橙色云朵（CDN 代理）。
 
@@ -463,15 +556,16 @@ systemctl reload nginx
 
 ```powershell
 ping yourdomain.com
+ping admin.yourdomain.com
 ```
 
-能 ping 到你的服务器 IP 就生效了。
+都能 ping 到你的服务器 IP 就生效了。
 
 ### 12.2 申请免费 SSL 证书（Let's Encrypt）
 
 ```bash
 apt install -y certbot python3-certbot-nginx
-certbot --nginx -d yourdomain.com -d www.yourdomain.com
+certbot --nginx -d yourdomain.com -d www.yourdomain.com -d admin.yourdomain.com
 ```
 
 按提示填写邮箱、同意协议，证书签发完成后 Certbot 会自动帮你把 Nginx 配置改成 HTTPS。
@@ -484,7 +578,10 @@ certbot renew --dry-run
 
 显示成功即可。系统会自动每月续期，不用你管。
 
-> 现在访问 `https://yourdomain.com` 应该能看到绿色小锁 🔒 的官网了。
+> 现在访问：
+> - `https://yourdomain.com` → 官网（有绿锁 🔒）
+> - `https://admin.yourdomain.com` → 管理后台（有绿锁 🔒）
+> - `https://admin.yourdomain.com/crm/login` → CRM 登录页
 
 ---
 
@@ -492,7 +589,13 @@ certbot renew --dry-run
 
 项目里有几处写死了默认域名，**上线前必须改**，否则：邮件里的追踪像素、CRM 链接、sitemap 都会指向错误的地址。
 
-用你本地编辑器打开 `lib/site.ts`，把第 5 行：
+**方法 A：在管理后台改（推荐）**
+
+登录管理后台 → 系统设置 → 修改「Domain」字段为你的正式域名。
+
+**方法 B：在代码里改**
+
+用你本地编辑器打开 `website/lib/site.ts` 和 `admin/lib/site.ts`，把第 5 行：
 
 ```ts
 domain: "https://moldcraftprecision.com",
@@ -506,12 +609,7 @@ domain: "https://yourdomain.com",
 
 然后更新到服务器（见[第 16 步](#第-16-步-以后怎么更新网站)）。
 
-> 另外，系统设置里的「域名」也可以在后台 `/admin` 的 System Settings 里改，会覆盖站点配置。两个都改成正式域名最稳妥。
-
-> 💡 **还没有域名怎么办？** 那就先跳过第 13 步，用 IP 方式访问网站：把第 11 步 Nginx 配置里的 `server_name` 改成 `_`（或者你的服务器 IP），`https://` 部分和证书就等有域名了再弄。访问方式：
-> - 直接浏览器打开 `http://你的服务器IP`（走 Nginx 80 端口，可以正常访问）
-> - 邮件里的链接、追踪像素、sitemap 暂时都会指向默认域名，等你有域名后按本步改掉并[重新构建](#第-16-步-以后怎么更新网站)即可
-> - 防火墙（第 14 步）也暂时不用开 `443`，只保留 22 和 80
+> 两个文件都要改（`website/lib/site.ts` 和 `admin/lib/site.ts`），或者在管理后台改一次就行。
 
 ---
 
@@ -541,22 +639,28 @@ ufw status
 
 ### 上线前快速检查清单
 
-- [ ] `https://你的域名` 能打开，有绿锁
-- [ ] `http://你的域名:3000`（裸端口）应该打不开（因为防火墙没放行 3000）✅ 正常
-- [ ] `/quote` 询价表单能正常提交（提交一条测试数据）
-- [ ] `/crm/login` 用 `CRM_PASSWORD` 能登录
-- [ ] `https://你的域名/sitemap.xml` 能打开，URL 都是你的正式域名
-- [ ] `pm2 status` 显示 `online`，`nginx -t` 无报错
-- [ ] `certbot renew --dry-run` 成功
+| 检查项 | 预期结果 |
+|---|---|
+| `https://yourdomain.com` | 官网正常打开，有绿锁 🔒 |
+| `https://admin.yourdomain.com` | 后台正常打开，有绿锁 🔒 |
+| `https://admin.yourdomain.com/crm/login` | 登录页正常显示 |
+| 用 CRM_PASSWORD 能否登录 | 登录后看到仪表盘 |
+| `https://yourdomain.com/quote` | 询价表单能正常提交 |
+| `http://yourdomain.com:3000` | 打不开（防火墙没放行 3000）✅ 正常 |
+| `https://yourdomain.com/sitemap.xml` | 能打开，URL 都是你的正式域名 |
+| `pm2 status` | 两个应用都 online |
+| `nginx -t` | 无报错 |
+| `certbot renew --dry-run` | 成功 |
 
 ### Q1：打不开网站 / 显示 502 Bad Gateway
 
-大多是 Nginx 连不上 3000 端口。依次检查：
+大多是 Nginx 连不上后端端口。依次检查：
 
 ```bash
-pm2 status          # 必须是 online，否则 pm2 restart moldcraft
-curl http://127.0.0.1:3000   # 服务器上能返回页面吗？
-nginx -t            # 配置语法对吗？
+pm2 status                           # 必须都是 online
+curl http://127.0.0.1:3000           # 官网能返回页面吗？
+curl http://127.0.0.1:3001           # 后台能返回页面吗？
+nginx -t                             # 配置语法对吗？
 ```
 
 ### Q2：`npm run build` 报错说内存不足
@@ -578,9 +682,9 @@ swapon /swapfile
 psql -h 127.0.0.1 -U moldcraft -d moldcraft
 ```
 
-能连上就是 `.env` 里的 `DATABASE_URL` 拼写错了（尤其是密码、`@` 符号）。确认 `nano /var/www/moldcraft/.env` 里的内容。
+能连上就是 `.env` 里的 `DATABASE_URL` 拼写错了（尤其是密码、`@` 符号）。确认两个 `.env` 文件内容正确。
 
-### Q4：改了 `lib/site.ts` / 代码后不生效
+### Q4：改了代码后不生效
 
 Next.js 是构建时编译的，改完代码必须**重新构建 + 重启**（见第 16 步）。
 
@@ -592,11 +696,19 @@ Next.js 是构建时编译的，改完代码必须**重新构建 + 重启**（�
 npm config set registry https://registry.npmmirror.com
 ```
 
-（服务器在国内访问 npm 官方源慢，换镜像立竿见影。）
-
 ### Q6：想用 Cloudflare CDN 加速全球访问
 
-等 HTTPS 证书装好、`https://你的域名` 正常后，再回 Cloudflare 把 A 记录的代理状态从「灰色云朵」点成「橙色云朵」，网站就走 CDN 了（还能免费防攻击、加缓存）。注意：开启后如果改服务器 IP，要记得回来改 Cloudflare 里的 A 记录。
+等 HTTPS 证书装好、`https://yourdomain.com` 正常后，再回 Cloudflare 把 A 记录的代理状态从「灰色云朵」点成「橙色云朵」，网站就走 CDN 了（还能免费防攻击、加缓存）。注意：**两个域名都要开**（主域名和 admin 子域名）。
+
+### Q7：管理后台访问显示 404
+
+检查 Nginx 配置里是否包含 `admin.yourdomain.com` 的 server 块，以及 DNS 是否已解析 `admin` 子域名。
+
+### Q8：CRM 登录后 Cookie 丢失 / 频繁跳登录页
+
+管理后台使用 httpOnly Cookie 做认证，Cookie 有效期 12 小时。如果频繁跳转，检查：
+1. `.env` 中的 `CRM_PASSWORD` 是否一致（两个应用都要一样）
+2. 访问的是否是正确的域名（Cookie 绑定域名）
 
 ---
 
@@ -615,11 +727,17 @@ git push
 ```bash
 cd /var/www/moldcraft
 git pull
-npm install && npm run build
-pm2 restart moldcraft
+npm install
+npm run build
+pm2 restart moldcraft-website moldcraft-admin
 ```
 
-> 不需要重新跑 `npm run seed`（除非你本地改了 `data/` 内置内容想同步）；不需要改 Nginx。数据库结构变化时才需要额外执行 `npx prisma migrate deploy`。
+> 不需要重新跑 `npm run seed`（除非你本地改了 `data/` 内容想同步）；不需要改 Nginx。数据库结构变化时才需要额外执行：
+>
+> ```bash
+> cd /var/www/moldcraft/website && npx prisma migrate deploy
+> cd /var/www/moldcraft/admin && npx prisma migrate deploy
+> ```
 
 ---
 
@@ -631,6 +749,61 @@ pm2 restart moldcraft
 2. 打开后填：**Host name** = 服务器 IP，**User name** = `root`，**Password** = root 密码，点登录。
 3. 左边是你本地电脑，右边是服务器。**把本地项目整个文件夹拖到 `/var/www/moldcraft`**。
    - 本地项目里的 `node_modules`、`.next`、`generated` 文件夹可以删掉再传（服务器上会重新生成），能省很多上传时间。
-4. 传完后回到 SSH 窗口，把第 9 步开始的命令继续执行即可。
+4. 传完后回到 SSH 窗口，从第 9 步开始执行即可。
 
 > 缺点：以后每次改代码都要重新传整个文件夹。所以能用 Git 还是推荐用 Git。
+
+---
+
+## 项目结构速查
+
+```
+injection-mold-website/           # 项目根目录
+├── package.json                  # monorepo 配置（npm workspaces）
+├── website/                      # 官网（端口 3000）
+│   ├── app/                      #   页面 + API
+│   ├── components/               #   前端组件
+│   ├── lib/                      #   业务逻辑
+│   ├── data/                     #   内置静态数据
+│   ├── prisma/                   #   数据库模型
+│   └── .env                      #   环境变量
+├── admin/                        # 管理后台（端口 3001）
+│   ├── app/admin/                #   内容管理后台
+│   ├── app/crm/                  #   CRM 销售系统
+│   │   ├── page.tsx              #     仪表盘
+│   │   ├── rfqs/                 #     询价管理
+│   │   ├── contacts/             #     联系人管理
+│   │   ├── companies/            #     公司管理
+│   │   └── login/                #     登录页
+│   ├── components/               #   后台组件
+│   ├── lib/                      #   业务逻辑（与 website 共享）
+│   ├── data/                     #   内置静态数据（与 website 共享）
+│   ├── prisma/                   #   数据库模型（与 website 相同）
+│   └── .env                      #   环境变量（与 website 相同）
+└── docs/
+    └── VULTR-DEPLOY.md           # 本教程
+```
+
+### 访问地址一览（上线后）
+
+| 页面 | 地址 | 说明 |
+|---|---|---|
+| 官网首页 | `https://yourdomain.com` | 面向客户的 B2B 网站 |
+| 询价表单 | `https://yourdomain.com/quote` | 客户提交报价请求 |
+| 管理后台 | `https://admin.yourdomain.com/admin` | 内容管理 |
+| CRM 仪表盘 | `https://admin.yourdomain.com/crm` | 销售管理 |
+| CRM 询价 | `https://admin.yourdomain.com/crm/rfqs` | 询价列表（支持筛选/分页） |
+| 联系人管理 | `https://admin.yourdomain.com/crm/contacts` | 联系人列表 |
+| 公司管理 | `https://admin.yourdomain.com/crm/companies` | 公司列表 |
+| 系统设置 | `https://admin.yourdomain.com/admin/system` | 品牌/联系方式/多语言 |
+
+### 端口使用情况
+
+| 端口 | 用途 | 对外开放 |
+|---|---|---|
+| 22 | SSH 远程连接 | ✅ 必须 |
+| 80 | HTTP（Nginx） | ✅ 必须 |
+| 443 | HTTPS（Nginx） | ✅ 必须 |
+| 3000 | 官网（内网） | ❌ 不对外开放 |
+| 3001 | 管理后台（内网） | ❌ 不对外开放 |
+| 5432 | PostgreSQL（内网） | ❌ 不对外开放 |
