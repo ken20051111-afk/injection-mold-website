@@ -140,16 +140,6 @@ async function queryOne(type: ContentType, slug: string): Promise<RecordRow | nu
   return null;
 }
 
-async function dbHasContent(): Promise<boolean> {
-  try {
-    const count = await prisma.contentPage.count();
-    return count > 0;
-  } catch (e) {
-    warnDb("count", e);
-    return false;
-  }
-}
-
 export async function listCapabilities(): Promise<Capability[]> {
   const rows = await queryAll("capability");
   if (rows.length > 0) return rows.map(toCapability);
@@ -159,8 +149,7 @@ export async function listCapabilities(): Promise<Capability[]> {
 export async function getCapabilityContent(slug: string): Promise<Capability | null> {
   const row = await queryOne("capability", slug);
   if (row) return toCapability(row);
-  if (!(await dbHasContent())) return getCapability(slug) ?? null;
-  return null;
+  return getCapability(slug) ?? null;
 }
 
 export async function listIndustries(): Promise<Industry[]> {
@@ -172,8 +161,7 @@ export async function listIndustries(): Promise<Industry[]> {
 export async function getIndustryContent(slug: string): Promise<Industry | null> {
   const row = await queryOne("industry", slug);
   if (row) return toIndustry(row);
-  if (!(await dbHasContent())) return getIndustry(slug) ?? null;
-  return null;
+  return getIndustry(slug) ?? null;
 }
 
 export async function listPosts(): Promise<Post[]> {
@@ -185,8 +173,7 @@ export async function listPosts(): Promise<Post[]> {
 export async function getPostContent(slug: string): Promise<Post | null> {
   const row = await queryOne("post", slug);
   if (row) return toPost(row);
-  if (!(await dbHasContent())) return getPost(slug) ?? null;
-  return null;
+  return getPost(slug) ?? null;
 }
 
 export async function listCaseStudies(): Promise<CaseStudy[]> {
@@ -198,8 +185,7 @@ export async function listCaseStudies(): Promise<CaseStudy[]> {
 export async function getCaseStudyContent(slug: string): Promise<CaseStudy | null> {
   const row = await queryOne("caseStudy", slug);
   if (row) return toCaseStudy(row);
-  if (!(await dbHasContent())) return getCaseStudy(slug) ?? null;
-  return null;
+  return getCaseStudy(slug) ?? null;
 }
 
 export async function listContentMeta(type: ContentType): Promise<ContentMeta[]> {
