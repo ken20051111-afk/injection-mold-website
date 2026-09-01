@@ -4,6 +4,8 @@ import { Card, Container, SectionHeading } from "@/components/ui";
 import { ContactForm } from "@/components/contact/ContactForm";
 import { JsonLd } from "@/components/seo/JsonLd";
 
+export const revalidate = 60;
+
 export async function generateMetadata() {
   const s = await getSite();
   return buildMetadata({

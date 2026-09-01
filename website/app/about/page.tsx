@@ -2,6 +2,8 @@ import { buildMetadata } from "@/lib/seo";
 import { getSite } from "@/lib/settings";
 import { Button, Card, Container, SectionHeading } from "@/components/ui";
 
+export const revalidate = 60;
+
 export async function generateMetadata() {
   const s = await getSite();
   return buildMetadata({

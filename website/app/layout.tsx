@@ -8,6 +8,8 @@ import { JsonLd } from "@/components/seo/JsonLd";
 import { getNav } from "@/lib/nav";
 import { getSite } from "@/lib/settings";
 
+export const revalidate = 60;
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
