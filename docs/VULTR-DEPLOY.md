@@ -27,7 +27,7 @@
 - [第 13 步 修改网站里的正式域名](#第-13-步-修改网站里的正式域名)
 - [第 14 步 打开防火墙](#第-14-步-打开防火墙)
 - [第 15 步 上线检查 + 常见问题](#第-15-步-上线检查--常见问题)
-- [第 16 步 以后怎么更新网站](#第-16-步-以后怎么更新网站)
+- [第 16 步 代码更新后重新拉取代码及部署（完整指令）](#第-16-步-代码更新后重新拉取代码及部署完整指令)
 - [附录：不用 Git，用 WinSCP 上传代码](#附录不用-git用-winscp-上传代码)
 
 ---
@@ -861,32 +861,146 @@ npm config set registry https://registry.npmmirror.com
 
 ---
 
-## 第 16 步 以后怎么更新网站
+## 第 16 步 代码更新后重新拉取代码及部署（完整指令）
 
-以后在 Windows 本地改完代码，推上去：
+> 每次在本地改完代码，都要"**本地提交推送 → 服务器拉取 → 重新构建 → 重启**"。
+> 下面把每一步的命令都写全，照着复制粘贴即可。
+
+### 16.1 本地：把修改推送到 GitHub
+
+在你**本地电脑**的项目根文件夹（能找到 `package.json` 的那个）里打开 PowerShell，依次执行：
 
 ```powershell
+# 1. 查看改了哪些文件（先确认一下）
+git status
+
+# 2. 把改动加入暂存区（. 表示添加所有改动）
 git add .
-git commit -m "改了xxx"
+
+# 3. 提交，写一句说明（改成你这次改了什么）
+git commit -m "修改了xxx"
+
+# 4. 推送到 GitHub
 git push
 ```
 
-然后 SSH 到服务器，三句话完成更新：
+> 看到类似 `main -> main` 就推送成功了。
+> 如果提前知道只改了几个文件，也可以精确提交，例如：
+> ```powershell
+> git add website/lib/prompts.ts docs/VULTR-DEPLOY.md
+> ```
+
+### 16.2 服务器：拉取最新代码
+
+SSH 登录服务器，进入项目根目录并拉取：
 
 ```bash
 cd /var/www/moldcraft
 git pull
+```
+
+> 拉取出来的改动列表里能看到你刚才提交的文件名，就说明拉取成功了。
+
+### 16.3 服务器：安装依赖（可选，但建议每次执行）
+
+代码可能引入了新的包，跑了才保险（没新包时很快，一下就过）：
+
+```bash
+cd /var/www/moldcraft
 npm install
+```
+
+### 16.4 服务器：重新构建两个应用
+
+> ⚠️ **关键步骤**。Next.js 是"编译型"的，**不重新构建，`git pull` 拉下来的新代码不会生效**。
+
+```bash
+cd /var/www/moldcraft
 npm run build
+```
+
+看到两个应用都显示 `✓ Compiled successfully` 才是成功。
+
+> 只想单独构建某一个：
+> ```bash
+> npm run build:website   # 只构建官网
+> npm run build:admin     # 只构建管理后台
+> ```
+
+### 16.5 服务器：重启应用
+
+```bash
 pm2 restart moldcraft-website moldcraft-admin
 ```
 
-> 不需要重新跑 `npm run seed`（除非你本地改了 `data/` 内容想同步）；不需要改 Nginx。数据库结构变化时才需要额外执行：
->
+### 16.6 一条命令搞定（推荐常用写法）
+
+上面 16.2–16.5 可以连在一起执行（`&&` 表示前一步成功才执行下一步）：
+
+```bash
+cd /var/www/moldcraft && git pull && npm install && npm run build && pm2 restart moldcraft-website moldcraft-admin
+```
+
+### 16.7 数据库结构变了怎么办
+
+> 只有当 `prisma/schema.prisma` 变了（比如加了表、改了字段）才需要，平时更新**跳过这步**。
+
+```bash
+cd /var/www/moldcraft/website && npx prisma db push
+cd /var/www/moldcraft/admin && npx prisma db push
+```
+
+> ⚠️ `db push` 会直接改数据库表结构，**执行前建议先备份数据库**：
 > ```bash
-> cd /var/www/moldcraft/website && npx prisma db push
-> cd /var/www/moldcraft/admin && npx prisma db push
+> sudo -u postgres pg_dump moldcraft > /var/www/moldcraft/backup_$(date +%F).sql
 > ```
+
+### 16.8 改了内置内容（data/）怎么同步
+
+如果你本地改了 `data/` 目录（知识库、产品、案例等内置数据），更新后还需要重灌一次数据：
+
+```bash
+cd /var/www/moldcraft
+npm run seed
+```
+
+> 注意：`npm run seed` 通常采用"存在即跳过"或覆盖策略，`data/` 内容变了才需要重跑。
+
+### 16.9 改了环境变量（.env）怎么办
+
+`.env` 是**不会**通过 `git pull` 更新的（它被 `.gitignore` 排除了），所以你只能在服务器上手动改：
+
+```bash
+nano /var/www/moldcraft/website/.env
+nano /var/www/moldcraft/admin/.env
+```
+
+改完**必须重启**（最好也重新构建）才会生效：
+
+```bash
+pm2 restart moldcraft-website moldcraft-admin
+```
+
+### 16.10 更新后如何确认成功
+
+```bash
+pm2 status                 # 两个应用都要是 online
+pm2 logs moldcraft-website # 看最近日志有没有报错（Ctrl+C 退出）
+curl http://127.0.0.1:3000 # 官网能返回页面吗？
+curl http://127.0.0.1:3001 # 后台能返回页面吗？
+```
+
+再到浏览器刷新官网 / 后台，确认新功能生效。
+
+### 更新流程速查表
+
+| 场景 | 需要做的命令 |
+|---|---|
+| 只改了普通页面/代码 | `git pull` + `npm run build` + `pm2 restart ...` |
+| 改了 package.json（新增依赖） | 上面再加 `npm install` |
+| 改了数据库 schema | 上面再加 16.7 的 `prisma db push` |
+| 改了 `data/` 内置数据 | 上面再加 `npm run seed` |
+| 改了 `.env` 环境变量 | 服务器上手动 nano 改 + 重启 |
 
 ---
 
