@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { Card } from "@/components/ui";
 import { deleteKnowledgeForm } from "@/app/admin/actions";
+import { DeleteConfirmButton } from "@/components/admin/DeleteConfirmButton";
 
 export const dynamic = "force-dynamic";
 
@@ -53,15 +54,7 @@ export default async function KnowledgeListPage() {
                 </Link>
                 <form action={deleteKnowledgeForm}>
                   <input type="hidden" name="id" value={doc.id} />
-                  <button
-                    type="submit"
-                    className="rounded-sm border border-red-500/30 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50"
-                    onClick={(e) => {
-                      if (!confirm(`确定删除"${doc.title}"？`)) e.preventDefault();
-                    }}
-                  >
-                    删除
-                  </button>
+                  <DeleteConfirmButton title={doc.title} />
                 </form>
               </div>
             </Card>

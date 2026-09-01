@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { contentTypes, type ContentType } from "@/lib/content";
 import { Card } from "@/components/ui";
 import { deleteContentForm } from "@/app/admin/actions";
+import { DeleteConfirmButton } from "@/components/admin/DeleteConfirmButton";
 
 export const dynamic = "force-dynamic";
 
@@ -77,15 +78,7 @@ export default async function ContentListPage({ params }: PageProps) {
                 <form action={deleteContentForm}>
                   <input type="hidden" name="type" value={meta.type} />
                   <input type="hidden" name="slug" value={row.slug} />
-                  <button
-                    type="submit"
-                    className="rounded-sm border border-red-500/30 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50"
-                    onClick={(e) => {
-                      if (!confirm(`确定删除"${row.title}"？`)) e.preventDefault();
-                    }}
-                  >
-                    删除
-                  </button>
+                  <DeleteConfirmButton title={row.title} />
                 </form>
               </div>
             </Card>
