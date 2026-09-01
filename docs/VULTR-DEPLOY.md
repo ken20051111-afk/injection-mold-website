@@ -19,6 +19,7 @@
 - [第 6 步 安装 PostgreSQL 并建数据库](#第-6-步-安装-postgresql-并建数据库)
 - [第 7 步 把项目代码放到服务器](#第-7-步-把项目代码放到服务器)
 - [第 8 步 配置环境变量 .env](#第-8-步-配置环境变量-env)
+- [第 8.5 步 接入 OpenAI gpt-4o-mini（24 小时 AI 客服）](#第-85-步-接入-openai-gpt-4o-mini24-小时-ai-客服)
 - [第 9 步 安装依赖 + 建表 + 灌数据 + 构建](#第-9-步-安装依赖--建表--灌数据--构建)
 - [第 10 步 用 PM2 让网站 7×24 小时运行](#第-10-步-用-pm2-让网站-724-小时运行)
 - [第 11 步 安装 Nginx（域名反向代理）](#第-11-步-安装-nginx域名反向代理)
@@ -323,6 +324,135 @@ nano .env
 
 ---
 
+## 第 8.5 步 接入 OpenAI gpt-4o-mini（24 小时 AI 客服）
+
+> 本项目内置了一个**全自动 AI 客服**（在官网右下角的聊天窗口），它可以 24 小时回答客户关于材料、工艺、交期等问题，还能自动识别询价意图并生成 CRM 询价单。
+> 它用的是 **OpenAI gpt-4o-mini** —— 价格便宜、速度快，非常适合做客服。
+
+### 8.5.1 它在项目里是怎么工作的（先了解再配置）
+
+| 组件 | 作用 | 文件 |
+|---|---|---|
+| AI 聊天接口 | 客户在官网右下角聊天，请求转到这个接口 | `website/app/api/chat/route.ts` |
+| 大模型调用 | 调用 OpenAI 生成回答 | `website/lib/openai.ts` |
+| 知识库检索 | 从知识库里检索相关内容喂给 AI（让它"懂你的产品"） | `website/lib/knowledge.ts` |
+| 询价识别 | AI 能识别客户想要报价，自动生成 CRM 询价单 | `website/lib/rfq-service.ts` |
+
+**关键逻辑**：代码看 `OPENAI_API_KEY` 是否配置来启用 AI——
+- 配了 key → AI 客服完整启用（回答 + 建询价单）
+- 没配 key（留空）→ 自动降级，只返回一句固定的引导语（让客户去 `/quote` 填表单）
+
+所以**只要填上 key，AI 客服就自动上线**，不需要改任何代码。
+
+### 8.5.2 第一步：注册 OpenAI 并获取 API Key（约 5 分钟）
+
+1. 打开 https://platform.openai.com ，用邮箱注册 / 登录。
+2. 点右上角头像 → **API keys** → **Create new secret key**。
+3. 给 key 起个名字（如 `moldcraft-chat`），点 **Create**。
+4. **立刻复制保存**这串 `sk-` 开头的 key（**只显示这一次**，关掉就找不回来了，丢了要重新生成）。
+5. **绑定支付方式**：OpenAI 是充值按量计费。点 **Settings → Billing**，填一张信用卡 / 或提前充值余额（Pay-as-you-go）。
+   - gpt-4o-mini 非常便宜（输入约 $0.15/百万 token），正常一个小网站一个月可能用不到几美元。
+6. 在 **Limits** 页面确认你的账户有可用额度（`Available to use` 不为 0）。
+
+> ⚠️ **注意**：key 是敏感信息，等同于密码。**永远不要把它提交到 Git / 写进代码**，只放在服务器 `.env` 里（`.gitignore` 已排除 `.env`）。
+
+### 8.5.3 第二步：把 key 填到两个 `.env` 文件
+
+AI 客服跑在官网（`website`）上，所以 `website/.env` **必须配置**；`admin/.env` 里也一起配上保持一致（后台 AI 功能也会用到）。
+
+编辑 `website/.env`：
+
+```bash
+cd /var/www/moldcraft/website
+nano .env
+```
+
+把这两行改成你的真实 key：
+
+```bash
+OPENAI_API_KEY="sk-你复制的那串key"
+OPENAI_MODEL="gpt-4o-mini"
+```
+
+保存退出（`Ctrl+O` 回车，`Ctrl+X`）。
+
+同样编辑 `admin/.env`，改成**相同的 key**：
+
+```bash
+cd /var/www/moldcraft/admin
+nano .env
+```
+
+把 `OPENAI_API_KEY` 改成同一个 key，保存退出。
+
+> `OPENAI_MODEL` 保持 `gpt-4o-mini` 即可，**不用改**。
+> 本教程第 8 步已经给了完整的 `.env` 模板，里面 **`OPENAI_API_KEY="sk-你的key"`** 就是这里要替换成真实 key 的地方。
+
+### 8.5.4 第三步：填充知识库（让 AI 更懂你的产品）
+
+AI 回答的质量取决于**知识库里有什么**。上线前建议先在管理后台录入你的真实产品信息：
+
+1. 登录管理后台 → **知识库管理**（`http://你的IP:3001/admin/knowledge`，有域名后是 `https://admin.yourdomain.com/admin/knowledge`）。
+2. 参考已有示例，录入：
+   - 你们能做的材料（如 ABS、PC、PA66、PEEK...）
+   - 工艺参数（模具钢材、注塑压力、公差等级...）
+   - 交期、MOQ、付款方式、认证（ISO/IATF）
+   - 常见问答
+3. 内容会用向量存进数据库，AI 回答时会自动检索最相关的内容来回答客户。
+
+> 没有知识库内容，AI 只能靠"通用知识"回答，可能不够精准。**知识库越丰富，AI 客服越专业。**
+
+### 8.5.5 第四步：重启应用让配置生效
+
+> ⚠️ Next.js 是构建时读环境变量的，**改完 `.env` 必须重启（最好重新构建）才会生效**。
+
+```bash
+pm2 restart moldcraft-website moldcraft-admin
+```
+
+> 如果是刚部署（还没 build 过），直接走第 9 步正常 build 即可，不用单独 restart。
+
+### 8.5.6 第五步：验证 AI 客服是否正常工作
+
+1. 打开官网：`http://你的服务器IP:3000`（有域名后是 `https://yourdomain.com`）。
+2. 在**右下角**找到聊天窗口，输入一句询价，比如：
+   > "Hi, I need 50000 pcs of ABS plastic injection molding parts, what's your lead time?"
+3. 正常的反应：
+   - AI 会给出一个像样的专业回答（基于知识库 + 通用知识）；
+   - 如果它识别到这是询价，会回复类似 `(Request XYZ has been created and our team will follow up.)` —— 说明自动生成了一张 CRM 询价单。
+4. 回到管理后台 → **CRM → 询价管理**（`/crm/rfqs`），应该能看到这条新询价记录。
+
+**没生效？** 按下面排查：
+
+```bash
+pm2 logs moldcraft-website        # 看官网日志，是否有 AI 相关报错
+pm2 logs moldcraft-admin          # 看后台日志
+```
+
+常见原因：
+- key 没填对 / 没填到 `website/.env` → 查看日志是否有 `OPENAI_API_KEY is not configured`
+- 没重启 / 没重新构建 → 改完 `.env` 必须重启（见 8.5.5）
+- OpenAI 账户没充值 / 额度用完 → 去 OpenAI Billing 充值
+- 服务器网络被墙 / 访问不了 OpenAI → 见下面"网络问题"
+
+### 8.5.7 常见问题
+
+**Q：服务器访问不了 OpenAI（超时/报错）？**
+如果你在中国大陆的机房或有网络限制，可能需要：
+- 换到新加坡/东京等机房（本项目建议的就是这几个）
+- 或使用 OpenAI 官方兼容的反代/代理地址。若用第三方中转，需要在代码里给 `OpenAI` 客户端指定 `baseURL`（改成代理的地址）。默认代码连的官方地址 `https://api.openai.com`。
+
+**Q：gpt-4o-mini 和 gpt-4o 有什么区别？**
+`gpt-4o-mini` 更便宜、更快，做客服足够。如果想追求更高的回答质量，可把 `.env` 里的 `OPENAI_MODEL` 改成 `gpt-4o`，但成本更高。
+
+**Q：客户聊天内容在哪看？**
+聊天记录都存在数据库 `ChatConversation` / `ChatMessage` 表里，在管理后台的 CRM（若已接入会话列表）可查看。
+
+**Q：不想用 AI 客服了怎么办？**
+把 `website/.env` 和 `admin/.env` 里的 `OPENAI_API_KEY` 清空（`OPENAI_API_KEY=""`），重启即可——系统会自动降级为"请去询价表单"的固定回复，不影响其他功能。
+
+---
+
 ## 第 9 步 安装依赖 + 建表 + 灌数据 + 构建
 
 进入项目根目录，依次执行：
@@ -342,19 +472,31 @@ npm install
 
 **9.2 生成 Prisma 客户端并建表**：
 
+> 本项目没有维护迁移文件（`prisma/migrations/` 目录），所以这里用 `db push`
+> 直接按 schema 建表，而不是 `prisma migrate deploy`。
+>
+> 注意：必须在 `website/`、`admin/` 子目录里执行（schema 在各自目录下），
+> 不要在项目根目录直接跑 prisma 命令。
+
 两个应用各有自己的 Prisma 配置，都需要执行：
 
 ```bash
 cd /var/www/moldcraft/website
 npx prisma generate
-npx prisma migrate deploy
+npx prisma db push
 
 cd /var/www/moldcraft/admin
 npx prisma generate
-npx prisma migrate deploy
+npx prisma db push
 ```
 
-看到 `All migrations have been applied successfully` 即建表成功。
+看到 `Your database is now in sync with your schema` 即建表成功。
+
+> 验证建表是否成功：
+> ```bash
+> sudo -u postgres psql -d moldcraft -c "\dt"
+> ```
+> 能看到 `Company`、`Contact`、`Rfq`、`ContentPage` 等一堆表即成功。
 
 **9.3 灌入内置内容（知识库、SEO 关键词等）**：
 
@@ -452,7 +594,13 @@ Nginx 的作用：把 `80/443 端口` 的访问转发给内网端口，这样访
 
 **11.1 安装**：
 
+> Nginx 是系统级软件，用 `apt` 安装，**在服务器的任意目录执行都可以**
+> （包括刚 SSH 登录进来时的默认目录 `/root`），
+> 不需要也不应该先 `cd` 到项目目录。和前面第 10 步的 `npm install -g pm2` 一样，
+> 凡是 `apt install ...` 或 `npm install -g ...` 都与当前所在目录无关。
+
 ```bash
+# 在服务器上任意路径执行（例如默认的 /root）
 apt install -y nginx
 ```
 
@@ -646,6 +794,7 @@ ufw status
 | `https://admin.yourdomain.com/crm/login` | 登录页正常显示 |
 | 用 CRM_PASSWORD 能否登录 | 登录后看到仪表盘 |
 | `https://yourdomain.com/quote` | 询价表单能正常提交 |
+| 官网右下角聊天框 | 输入询价能收到 AI 专业回答（见 8.5.6） |
 | `http://yourdomain.com:3000` | 打不开（防火墙没放行 3000）✅ 正常 |
 | `https://yourdomain.com/sitemap.xml` | 能打开，URL 都是你的正式域名 |
 | `pm2 status` | 两个应用都 online |
@@ -676,7 +825,7 @@ swapon /swapfile
 
 加完再重新 `npm run build`。若还不行，直接在 Vultr 后台把机器升级到 2GB/4GB。
 
-### Q3：`prisma migrate deploy` 报数据库连不上
+### Q3：`prisma db push` 报数据库连不上
 
 ```bash
 psql -h 127.0.0.1 -U moldcraft -d moldcraft
@@ -735,8 +884,8 @@ pm2 restart moldcraft-website moldcraft-admin
 > 不需要重新跑 `npm run seed`（除非你本地改了 `data/` 内容想同步）；不需要改 Nginx。数据库结构变化时才需要额外执行：
 >
 > ```bash
-> cd /var/www/moldcraft/website && npx prisma migrate deploy
-> cd /var/www/moldcraft/admin && npx prisma migrate deploy
+> cd /var/www/moldcraft/website && npx prisma db push
+> cd /var/www/moldcraft/admin && npx prisma db push
 > ```
 
 ---

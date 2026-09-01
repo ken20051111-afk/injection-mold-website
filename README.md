@@ -28,8 +28,8 @@ npm install
 cp .env.example .env
 # 编辑 .env：DATABASE_URL / OPENAI_API_KEY / SMTP_* / CRM_PASSWORD
 
-# 2. 建库并迁移（需要本机或远程 PostgreSQL）
-npx prisma migrate dev --name init
+# 2. 按 schema 建表（需要本机或远程 PostgreSQL；在 website/ 和 admin/ 目录各执行一次）
+cd website && npx prisma db push && cd ../admin && npx prisma db push && cd ..
 
 # 3. 灌入知识库 + SEO 关键词（有 OPENAI_API_KEY 时自动生成向量）
 npm run seed
@@ -49,8 +49,7 @@ npm run start        # 生产运行
 npm run lint         # ESLint
 npm run seed         # 知识库 + 关键词入库
 npx prisma generate  # 重新生成 Prisma Client
-npx prisma migrate dev   # 开发库迁移
-npx prisma migrate deploy # 生产库迁移
+npx prisma db push   # 按 schema 建表/同步表结构（本项目无迁移文件）
 ```
 
 ## 环境变量
@@ -138,7 +137,7 @@ generated/prisma/  Prisma 生成客户端(勿手改)
 
 ## 上线检查清单
 
-1. `npx prisma migrate deploy` 生产库迁移
+1. 在 `website/` 和 `admin/` 目录各执行一次 `npx prisma db push` 建表
 2. `npm run seed` 灌入知识库（生产环境）
 3. `npm run build && npm run start`
 4. 配置域名 → `lib/site.ts` 的 `domain` 改为正式域名
