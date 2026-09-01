@@ -126,8 +126,8 @@ async function queryAll(type: ContentType): Promise<RecordRow[]> {
 
 async function queryOne(type: ContentType, slug: string): Promise<RecordRow | null> {
   try {
-    const row = await prisma.contentPage.findUnique({
-      where: { type_slug: { type, slug } },
+    const row = await prisma.contentPage.findFirst({
+      where: { type, slug },
       select: { slug: true, title: true, excerpt: true, data: true, published: true },
     });
     if (row && row.published) {

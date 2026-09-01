@@ -22,7 +22,7 @@ export default async function ContentEditPage({ params }: PageProps) {
     initial = emptyContent(type as ContentType);
   } else {
     const row = await prisma.contentPage
-      .findUnique({ where: { type_slug: { type: type as ContentType, slug } } })
+      .findFirst({ where: { type: type as ContentType, slug } })
       .catch(() => null);
     if (!row) notFound();
     initial = recordToFormData(type as ContentType, { slug: row.slug, data: row.data });
