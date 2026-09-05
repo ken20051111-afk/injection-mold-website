@@ -1,16 +1,18 @@
 import { listCapabilities, listCaseStudies } from "@/lib/content";
 import { companyFacts } from "@/lib/site";
 import { getSite } from "@/lib/settings";
+import { getHeroImage } from "@/lib/heroImage";
 import { Button, Card, Container, SectionHeading } from "@/components/ui";
 import { JsonLd } from "@/components/seo/JsonLd";
 
 export const revalidate = 60;
 
 export default async function HomePage() {
-  const [caps, cases, site] = await Promise.all([
+  const [caps, cases, site, hero] = await Promise.all([
     listCapabilities(),
     listCaseStudies(),
     getSite(),
+    getHeroImage(),
   ]);
 
   const pageJsonLd = {
@@ -64,11 +66,11 @@ export default async function HomePage() {
               </div>
             </div>
 
-            {site.heroImage && (
+            {hero && (
               <figure className="relative">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={site.heroImage}
+                  src="/media/hero-image"
                   alt={`${site.brand} 精密注塑模具`}
                   className="h-64 w-full rounded-lg border border-steel-700/60 object-cover shadow-2xl sm:h-80 lg:h-[440px]"
                 />

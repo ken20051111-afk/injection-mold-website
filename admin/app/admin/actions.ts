@@ -2,9 +2,6 @@
 
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
-import { mkdir, unlink, writeFile } from "node:fs/promises";
-import path from "node:path";
-import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/db";
 import { getEmbedding } from "@/lib/openai";
 import { saveSite } from "@/lib/settings";
@@ -198,28 +195,29 @@ function parseLines(value: FormDataEntryValue | null): string[] {
     .filter(Boolean);
 }
 
-const ALLOWED_IMAGE_EXT = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".avif"];
-const MAX_IMAGE_SIZE = 4 * 1024 * 1024;
+const ALLOWED_HERO_IMAGE_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "image/avif",
+]);
+const MAX_HERO_IMAGE_SIZE = 4 * 1024 * 1024;
+const HERO_IMAGE_URL = "/media/hero-image";
 
 async function saveHeroImage(file: File): Promise<string> {
-  const ext = path.extname(file.name).toLowerCase();
-  if (!ALLOWED_IMAGE_EXT.includes(ext)) throw new Error("Unsupported image type");
-  if (file.size > MAX_IMAGE_SIZE) throw new Error("Image too large");
-  const dir = path.resolve(process.cwd(), "..", "website", "public", "uploads");
-  await mkdir(dir, { recursive: true });
-  const name = `hero-${randomUUID()}${ext}`;
-  await writeFile(path.join(dir, name), Buffer.from(await file.arrayBuffer()));
-  return `/uploads/${name}`;
-}
-
-async function removeUploaded(url: string): Promise<void> {
-  const name = url.replace(/^\/uploads\//, "");
-  if (!name || name.includes("/") || name.includes("\\")) return;
-  try {
-    await unlink(path.resolve(process.cwd(), "..", "website", "public", "uploads", name));
-  } catch {
-    // ignore missing files
-  }
+  if (!ALLOWED_HERO_IMAGE_TYPES.has(file.type)) throw new Error("Unsupported image type");
+  if (file.size > MAX_HERO_IMAGE_SIZE) throw new Error("Image too large");
+  const value = {
+    mimeType: file.type,
+    data: Buffer.from(await file.arrayBuffer()).toString("base64"),
+  };
+  await prisma.systemSetting.upsert({
+    where: { key: "siteHeroImage" },
+    update: { value },
+    create: { key: "siteHeroImage", value },
+  });
+  return HERO_IMAGE_URL;
 }
 
 export async function saveSystemSettings(formData: FormData): Promise<{ ok: boolean; error?: string }> {
@@ -230,11 +228,12 @@ export async function saveSystemSettings(formData: FormData): Promise<{ ok: bool
   }
   try {
     const file = formData.get("heroImage");
-    let heroImage = "";
+    let heroImage: string | undefined;
     if (file && typeof file !== "string") {
       heroImage = await saveHeroImage(file);
     } else if (typeof file === "string") {
-      heroImage = file.trim();
+      const prev = file.trim();
+      heroImage = prev.startsWith("/uploads/") ? "" : prev;
     }
     await saveSite({
       brand: String(formData.get("brand") ?? "").trim(),
@@ -257,10 +256,6 @@ export async function saveSystemSettings(formData: FormData): Promise<{ ok: bool
       locales: parseLines(formData.get("locales")),
       heroImage,
     });
-    const oldImage = String(formData.get("heroImageOld") ?? "").trim();
-    if (heroImage && /^\/uploads\//.test(heroImage) && oldImage && oldImage !== heroImage && /^\/uploads\//.test(oldImage)) {
-      await removeUploaded(oldImage);
-    }
     for (const p of ["/", "/sitemap.xml", "/robots.txt", "/manifest.webmanifest"]) {
       revalidatePath(p);
     }

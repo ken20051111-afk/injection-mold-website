@@ -82,7 +82,6 @@ export function SystemSettingsForm({ site }: Props) {
     const fd = new FormData();
     for (const [k, v] of Object.entries(form)) fd.set(k, v);
     if (heroFile) fd.set("heroImage", heroFile);
-    fd.set("heroImageOld", form.heroImage ?? "");
     const res = await saveSystemSettings(fd);
     setResult({
       ok: res.ok,
