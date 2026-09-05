@@ -7,6 +7,7 @@ export type Capability = {
   applications: string[];
   faqs: { question: string; answer: string }[];
   keyword: string;
+  heroImage?: string;
 };
 
 export const capabilities: Capability[] = [

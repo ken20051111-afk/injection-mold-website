@@ -55,6 +55,11 @@ export async function saveContent(formData: FormData): Promise<{ ok: boolean; er
   } catch {
     return { ok: false, error: "JSON 数据无效" };
   }
+  const MAX_HERO_IMAGE_DATA_URL = 2_500_000;
+  const heroImage = data.heroImage;
+  if (heroImage && (typeof heroImage !== "string" || !heroImage.startsWith("data:image/") || heroImage.length > MAX_HERO_IMAGE_DATA_URL)) {
+    return { ok: false, error: "顶部横幅图片格式或大小不符合要求" };
+  }
   const jsonData = data as unknown as Prisma.InputJsonValue;
 
   let title = slug;

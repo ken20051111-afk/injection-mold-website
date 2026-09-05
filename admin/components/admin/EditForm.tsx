@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { saveContent } from "@/app/admin/actions";
 
 type FieldType = "text" | "textarea" | "number" | "newlines" | "pairs" | "faqs";
@@ -67,15 +67,38 @@ const labelCls = "mb-1 block text-xs font-bold uppercase tracking-widest text-sl
 type Pair = { label: string; value: string };
 type Faq = { question: string; answer: string };
 
+const MAX_HERO_IMAGE_BYTES = 1.5 * 1024 * 1024;
+
 export function EditForm({ type, originalSlug, initial }: FormProps) {
   const [form, setForm] = useState<Record<string, unknown>>({ published: true, ...initial });
   const [saving, setSaving] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const fields = fieldsByType[type] ?? [];
 
+  const heroImage = typeof form.heroImage === "string" ? form.heroImage : "";
+
   function set(key: string, value: unknown) {
     setForm((f) => ({ ...f, [key]: value }));
+  }
+
+  function onHeroFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      alert("请选择图片文件");
+      if (fileRef.current) fileRef.current.value = "";
+      return;
+    }
+    if (file.size > MAX_HERO_IMAGE_BYTES) {
+      alert("图片过大，请选择 1.5MB 以内的图片");
+      if (fileRef.current) fileRef.current.value = "";
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => set("heroImage", String(reader.result ?? ""));
+    reader.readAsDataURL(file);
   }
 
   function setPairs(key: string, rows: Pair[]) {
@@ -167,6 +190,38 @@ export function EditForm({ type, originalSlug, initial }: FormProps) {
           </div>
         ))}
       </div>
+
+      {type === "capability" && (
+        <div className="rounded-md border border-slate-200 p-4">
+          <label className={labelCls}>顶部横幅图片</label>
+          <p className="mb-3 text-xs text-slate-400">
+            显示在详情页顶部，支持 jpg / png / webp / gif，最大 1.5MB。
+          </p>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
+            onChange={onHeroFile}
+            className="block w-full text-sm text-slate-500 file:mr-3 file:rounded-sm file:border-0 file:bg-accent-500 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-accent-600"
+          />
+          {heroImage && (
+            <div className="mt-3 flex items-start gap-4">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={heroImage} alt="顶部横幅预览" className="h-40 w-full max-w-md rounded-md border border-slate-200 bg-slate-50 object-cover" />
+              <button
+                type="button"
+                onClick={() => {
+                  set("heroImage", "");
+                  if (fileRef.current) fileRef.current.value = "";
+                }}
+                className="shrink-0 rounded-sm border border-red-500/30 px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50"
+              >
+                移除图片
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="flex items-center gap-2">
         <input

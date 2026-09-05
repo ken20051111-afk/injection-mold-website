@@ -63,6 +63,7 @@ function toCapability(r: RecordRow): Capability {
     shortDescription: String(d.shortDescription ?? ""),
     description: String(d.description ?? ""),
     keyword: String(d.keyword ?? ""),
+    heroImage: String(d.heroImage ?? ""),
     specs: parsePairs(d.specs),
     applications: parseStrings(d.applications),
     faqs: parseFaqs(d.faqs),
@@ -218,7 +219,7 @@ export async function listContentMeta(type: ContentType): Promise<ContentMeta[]>
 export function emptyContent(type: ContentType): Record<string, unknown> {
   switch (type) {
     case "capability":
-      return { slug: "", name: "", shortDescription: "", description: "", keyword: "", specs: [], applications: [], faqs: [] };
+      return { slug: "", name: "", shortDescription: "", description: "", keyword: "", heroImage: "", specs: [], applications: [], faqs: [] };
     case "industry":
       return { slug: "", name: "", shortDescription: "", description: "", keyword: "", typicalParts: [], standards: [], materials: [] };
     case "caseStudy":
