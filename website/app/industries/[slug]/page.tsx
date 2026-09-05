@@ -77,6 +77,16 @@ export default async function IndustryPage({ params }: PageProps) {
           { label: ind.name },
         ]}
       />
+      {ind.heroImage && (
+        <figure className="mt-8 overflow-hidden rounded-lg border border-slate-200">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={ind.heroImage}
+            alt={`${ind.name} 注塑模具`}
+            className="h-52 w-full object-cover sm:h-72 lg:h-96"
+          />
+        </figure>
+      )}
       <div className="grid gap-12 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-accent-500">{ind.keyword}</p>

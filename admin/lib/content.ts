@@ -78,6 +78,7 @@ function toIndustry(r: RecordRow): Industry {
     shortDescription: String(d.shortDescription ?? ""),
     description: String(d.description ?? ""),
     keyword: String(d.keyword ?? ""),
+    heroImage: String(d.heroImage ?? ""),
     typicalParts: parseStrings(d.typicalParts),
     standards: parseStrings(d.standards),
     materials: parseStrings(d.materials),
@@ -221,7 +222,7 @@ export function emptyContent(type: ContentType): Record<string, unknown> {
     case "capability":
       return { slug: "", name: "", shortDescription: "", description: "", keyword: "", heroImage: "", specs: [], applications: [], faqs: [] };
     case "industry":
-      return { slug: "", name: "", shortDescription: "", description: "", keyword: "", typicalParts: [], standards: [], materials: [] };
+      return { slug: "", name: "", shortDescription: "", description: "", keyword: "", heroImage: "", typicalParts: [], standards: [], materials: [] };
     case "caseStudy":
       return { slug: "", title: "", industry: "", challenge: "", solution: "", results: [], moldSpecs: [] };
     case "post":

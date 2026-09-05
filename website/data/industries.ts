@@ -7,6 +7,7 @@ export type Industry = {
   standards: string[];
   materials: string[];
   keyword: string;
+  heroImage?: string;
 };
 
 export const industries: Industry[] = [
