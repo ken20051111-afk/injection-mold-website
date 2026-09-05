@@ -13,7 +13,13 @@ type PageProps = {
 type DocFromDb = Awaited<ReturnType<typeof prisma.knowledgeDoc.findUnique>>;
 
 export default async function KnowledgeEditPage({ params }: PageProps) {
-  const { id } = await params;
+  const { id: rawId } = await params;
+  let id: string;
+  try {
+    id = decodeURIComponent(rawId);
+  } catch {
+    id = rawId;
+  }
   const isNew = id === "new";
 
   let initial: { category: string; title: string; content: string; sourceUrl: string } = {
