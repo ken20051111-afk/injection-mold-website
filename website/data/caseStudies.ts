@@ -6,6 +6,7 @@ export type CaseStudy = {
   solution: string;
   results: { label: string; value: string }[];
   moldSpecs: { label: string; value: string }[];
+  heroImage?: string;
 };
 
 export const caseStudies: CaseStudy[] = [

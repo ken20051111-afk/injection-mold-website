@@ -7,6 +7,7 @@ export type Post = {
   keyword: string;
   body: string[];
   faqs: { question: string; answer: string }[];
+  heroImage?: string;
 };
 
 export const posts: Post[] = [

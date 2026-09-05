@@ -191,7 +191,7 @@ export function EditForm({ type, originalSlug, initial }: FormProps) {
         ))}
       </div>
 
-      {(type === "capability" || type === "industry") && (
+      {(type === "capability" || type === "industry" || type === "caseStudy" || type === "post") && (
         <div className="rounded-md border border-slate-200 p-4">
           <label className={labelCls}>顶部横幅图片</label>
           <p className="mb-3 text-xs text-slate-400">

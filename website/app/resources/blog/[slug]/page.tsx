@@ -65,6 +65,16 @@ export default async function BlogPostPage({ params }: PageProps) {
           { label: post.title },
         ]}
       />
+      {post.heroImage && (
+        <figure className="mt-8 overflow-hidden rounded-lg border border-slate-200">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={post.heroImage}
+            alt={post.title}
+            className="h-52 w-full object-cover sm:h-72 lg:h-96"
+          />
+        </figure>
+      )}
       <div className="grid gap-12 lg:grid-cols-3">
         <article className="lg:col-span-2">
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-accent-500">

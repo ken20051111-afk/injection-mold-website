@@ -94,6 +94,7 @@ function toPost(r: RecordRow): Post {
     category: String(d.category ?? ""),
     readMinutes: Number(d.readMinutes ?? 5),
     keyword: String(d.keyword ?? ""),
+    heroImage: String(d.heroImage ?? ""),
     body: parseStrings(d.body),
     faqs: parseFaqs(d.faqs),
   };
@@ -107,6 +108,7 @@ function toCaseStudy(r: RecordRow): CaseStudy {
     industry: String(d.industry ?? ""),
     challenge: String(d.challenge ?? ""),
     solution: String(d.solution ?? ""),
+    heroImage: String(d.heroImage ?? ""),
     results: parsePairs(d.results),
     moldSpecs: parsePairs(d.moldSpecs),
   };
@@ -224,9 +226,9 @@ export function emptyContent(type: ContentType): Record<string, unknown> {
     case "industry":
       return { slug: "", name: "", shortDescription: "", description: "", keyword: "", heroImage: "", typicalParts: [], standards: [], materials: [] };
     case "caseStudy":
-      return { slug: "", title: "", industry: "", challenge: "", solution: "", results: [], moldSpecs: [] };
+      return { slug: "", title: "", industry: "", challenge: "", solution: "", heroImage: "", results: [], moldSpecs: [] };
     case "post":
-      return { slug: "", title: "", excerpt: "", category: "", readMinutes: 5, keyword: "", body: [], faqs: [] };
+      return { slug: "", title: "", excerpt: "", category: "", readMinutes: 5, keyword: "", heroImage: "", body: [], faqs: [] };
   }
 }
 

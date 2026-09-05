@@ -63,6 +63,17 @@ export default async function CaseStudyPage({ params }: PageProps) {
         ]}
       />
 
+      {cs.heroImage && (
+        <figure className="mt-8 overflow-hidden rounded-lg border border-slate-200">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={cs.heroImage}
+            alt={cs.title}
+            className="h-52 w-full object-cover sm:h-72 lg:h-96"
+          />
+        </figure>
+      )}
+
       <p className="text-xs font-bold uppercase tracking-[0.2em] text-accent-500">{cs.industry}</p>
       <h1 className="mt-2 max-w-3xl text-3xl font-black leading-tight text-steel-900 lg:text-4xl">
         {cs.title}
