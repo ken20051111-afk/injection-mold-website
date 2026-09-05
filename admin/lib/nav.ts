@@ -8,7 +8,7 @@ export const getNav = cache(async (): Promise<NavItem[]> => {
   const [caps, inds] = await Promise.all([listCapabilities(), listIndustries()]);
   return [
     {
-      label: "加工能力",
+      label: "核心能力",
       href: "/capabilities",
       children: caps.map((c) => ({ label: c.name, href: `/capabilities/${c.slug}` })),
     },

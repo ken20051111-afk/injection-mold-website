@@ -72,7 +72,7 @@ export default async function CapabilityPage({ params }: PageProps) {
     "@type": "BreadcrumbList",
     itemListElement: [
       { "@type": "ListItem", position: 1, name: "首页", item: site.domain },
-      { "@type": "ListItem", position: 2, name: "加工能力", item: `${site.domain}/capabilities` },
+      { "@type": "ListItem", position: 2, name: "核心能力", item: `${site.domain}/capabilities` },
       { "@type": "ListItem", position: 3, name: cap.name },
     ],
   };

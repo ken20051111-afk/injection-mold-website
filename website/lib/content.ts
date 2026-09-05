@@ -7,7 +7,7 @@ import { posts, getPost, type Post } from "../data/posts";
 export type ContentType = "capability" | "industry" | "caseStudy" | "post";
 
 export const contentTypes: { type: ContentType; label: string; publicBase: string }[] = [
-  { type: "capability", label: "加工能力", publicBase: "/capabilities" },
+  { type: "capability", label: "核心能力", publicBase: "/capabilities" },
   { type: "industry", label: "服务行业", publicBase: "/industries" },
   { type: "caseStudy", label: "成功案例", publicBase: "/case-studies" },
   { type: "post", label: "行业博客", publicBase: "/resources/blog" },
