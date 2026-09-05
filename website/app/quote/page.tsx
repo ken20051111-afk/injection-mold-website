@@ -45,7 +45,7 @@ export default function QuotePage() {
               <li>1. 工程师审阅您的需求（24 小时内）</li>
               <li>2. 提供 DFM 反馈与成本估算</li>
               <li>3. 正式报价，包含模具寿命与交期</li>
-              <li>4. 出货前经"金样"确认</li>
+              <li>4. 出货前经“金样”确认</li>
             </ol>
           </div>
         </div>
