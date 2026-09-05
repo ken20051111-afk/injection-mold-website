@@ -7,12 +7,17 @@ import { DeleteConfirmButton } from "@/components/admin/DeleteConfirmButton";
 export const dynamic = "force-dynamic";
 
 export default async function KnowledgeListPage() {
-  const docs = await prisma.knowledgeDoc
-    .findMany({
+  let docs: { id: string; category: string; title: string; content: string; updatedAt: Date }[] = [];
+  let loadError = "";
+  try {
+    docs = await prisma.knowledgeDoc.findMany({
       select: { id: true, category: true, title: true, content: true, updatedAt: true },
       orderBy: { updatedAt: "desc" },
-    })
-    .catch(() => []);
+    });
+  } catch (e) {
+    console.error("knowledge list query failed:", e);
+    loadError = "连接数据库失败，无法加载知识库。请确认数据库可用后重试。";
+  }
 
   return (
     <div>
@@ -31,7 +36,11 @@ export default async function KnowledgeListPage() {
         </Link>
       </div>
 
-      {docs.length === 0 ? (
+      {loadError ? (
+        <Card className="border-red-500/30 bg-red-500/10 p-6 text-red-700">
+          <p className="text-sm">{loadError}</p>
+        </Card>
+      ) : docs.length === 0 ? (
         <Card className="p-10 text-center text-sm text-slate-500">
           知识库为空。运行 <code className="rounded bg-slate-100 px-1.5 py-0.5">npm run seed</code> 导入内置文档，
           或手动添加一篇。
