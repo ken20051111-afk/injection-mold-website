@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { contentTypes, type ContentType } from "@/lib/content";
+import { getSite } from "@/lib/settings";
 import { Card } from "@/components/ui";
 import { deleteContentForm } from "@/app/admin/actions";
 import { DeleteConfirmButton } from "@/components/admin/DeleteConfirmButton";
@@ -16,6 +17,8 @@ export default async function ContentListPage({ params }: PageProps) {
   const { type } = await params;
   const meta = contentTypes.find((c) => c.type === type);
   if (!meta) notFound();
+
+  const siteBase = (process.env.NEXT_PUBLIC_SITE_URL ?? (await getSite()).domain).replace(/\/+$/, "");
 
   const rows = await prisma.contentPage
     .findMany({
@@ -42,7 +45,7 @@ export default async function ContentListPage({ params }: PageProps) {
 
       {rows.length === 0 ? (
         <Card className="p-10 text-center text-sm text-slate-500">
-          暂无内容。点击"+ 新建"创建第一条。
+          暂无内容。点击“+ 新建”创建第一条。
         </Card>
       ) : (
         <ul className="space-y-3">
@@ -63,7 +66,7 @@ export default async function ContentListPage({ params }: PageProps) {
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 <Link
-                  href={`${meta.publicBase}/${row.slug}`}
+                  href={`${siteBase}${meta.publicBase}/${row.slug}`}
                   target="_blank"
                   className="rounded-sm border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:border-accent-500 hover:text-accent-500"
                 >
