@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { contentTypes, type ContentType } from "@/lib/content";
-import { getSite } from "@/lib/settings";
+import { getPublicSiteBase } from "@/lib/settings";
 import { Card } from "@/components/ui";
 import { deleteContentForm } from "@/app/admin/actions";
 import { DeleteConfirmButton } from "@/components/admin/DeleteConfirmButton";
@@ -18,7 +18,7 @@ export default async function ContentListPage({ params }: PageProps) {
   const meta = contentTypes.find((c) => c.type === type);
   if (!meta) notFound();
 
-  const siteBase = (process.env.NEXT_PUBLIC_SITE_URL ?? (await getSite()).domain).replace(/\/+$/, "");
+  const siteBase = await getPublicSiteBase();
 
   const rows = await prisma.contentPage
     .findMany({

@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { headers } from "next/headers";
 import { prisma } from "./db";
 import { site as siteDefaults } from "./site";
 import type { Prisma } from "../generated/prisma/client";
@@ -49,6 +50,23 @@ export async function saveSite(config: Partial<SiteConfig>): Promise<void> {
     create: { key: "site", value },
   });
 }
+
+export const getPublicSiteBase = cache(async (): Promise<string> => {
+  const explicit = process.env.NEXT_PUBLIC_SITE_URL ?? process.env.SITE_URL;
+  if (explicit) return explicit.replace(/\/+$/, "");
+
+  const hdrs = await headers();
+  const proto = hdrs.get("x-forwarded-proto") ?? "https";
+  const rawHost = hdrs.get("x-forwarded-host") ?? hdrs.get("host") ?? "";
+  const host = rawHost.split(",")[0].trim();
+
+  if (/^admin\./.test(host) && !/^admin\.(localhost|127\.0\.0\.1)([:/]|$)/.test(host)) {
+    return `${proto}://${host.replace(/^admin\./, "")}`;
+  }
+
+  const site = await getSite();
+  return site.domain.replace(/\/+$/, "");
+});
 
 export type IntegrationStatus = {
   envKey: string;
