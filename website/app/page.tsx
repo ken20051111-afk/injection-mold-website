@@ -41,26 +41,39 @@ export default async function HomePage() {
       <JsonLd data={[pageJsonLd, orgSpeakable]} />
       <section className="grid-pattern bg-steel-900 text-white">
         <Container className="py-20 lg:py-28">
-          <div className="max-w-3xl">
-            <p className="mb-4 inline-flex rounded-sm border border-accent-500/40 bg-accent-500/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-accent-400">
-              ISO 9001 &middot; IATF 16949 &middot; 中国东莞
-            </p>
-            <h1 className="speakable-hero text-4xl font-black leading-tight sm:text-5xl lg:text-6xl">
-              精密注塑模具，{" "}
-              <span className="text-accent-400">准期交付，次次如一</span>
-            </h1>
-            <p className="speakable-intro mt-6 max-w-2xl text-lg leading-relaxed text-slate-300">
-              每年为汽车、医疗、电子与包装客户交付 {site.annualMolds}+ 套模具，产品远销{" "}
-              {site.exportsCountries}+ 个国家。24 小时工程评审，{site.leadTimeWeeks} 周内交付样品。
-            </p>
-            <div className="mt-8 flex flex-wrap gap-4">
-              <Button href="/quote" size="lg">
-                24 小时内获取报价
-              </Button>
-              <Button href="/capabilities" size="lg" variant="secondary">
-                了解我们的能力
-              </Button>
+          <div className="grid items-center gap-10 lg:grid-cols-2">
+            <div className="max-w-3xl">
+              <p className="mb-4 inline-flex rounded-sm border border-accent-500/40 bg-accent-500/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-accent-400">
+                ISO 9001 &middot; IATF 16949 &middot; 中国东莞
+              </p>
+              <h1 className="speakable-hero text-4xl font-black leading-tight sm:text-5xl lg:text-6xl">
+                精密注塑模具，{" "}
+                <span className="text-accent-400">准期交付，次次如一</span>
+              </h1>
+              <p className="speakable-intro mt-6 max-w-2xl text-lg leading-relaxed text-slate-300">
+                每年为汽车、医疗、电子与包装客户交付 {site.annualMolds}+ 套模具，产品远销{" "}
+                {site.exportsCountries}+ 个国家。24 小时工程评审，{site.leadTimeWeeks} 周内交付样品。
+              </p>
+              <div className="mt-8 flex flex-wrap gap-4">
+                <Button href="/quote" size="lg">
+                  24 小时内获取报价
+                </Button>
+                <Button href="/capabilities" size="lg" variant="secondary">
+                  了解我们的能力
+                </Button>
+              </div>
             </div>
+
+            {site.heroImage && (
+              <figure className="relative">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={site.heroImage}
+                  alt={`${site.brand} 精密注塑模具`}
+                  className="h-64 w-full rounded-lg border border-steel-700/60 object-cover shadow-2xl sm:h-80 lg:h-[440px]"
+                />
+              </figure>
+            )}
           </div>
 
           <div className="mt-16 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-steel-700 bg-steel-700 sm:grid-cols-4">

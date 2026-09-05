@@ -22,6 +22,7 @@ export type SiteConfig = {
   certifications: string[];
   leadTimeWeeks: number;
   deliveryRate: number;
+  heroImage: string;
 };
 
 let siteWarned = false;

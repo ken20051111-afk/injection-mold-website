@@ -17,6 +17,7 @@ export const site = {
   certifications: ["ISO 9001:2015", "IATF 16949", "ISO 14001"],
   leadTimeWeeks: 3,
   deliveryRate: 98,
+  heroImage: "",
 } as const;
 
 export const companyFacts = [

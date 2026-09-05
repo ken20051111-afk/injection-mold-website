@@ -54,10 +54,26 @@ export function SystemSettingsForm({ site }: Props) {
   });
   const [saving, setSaving] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
+  const [heroFile, setHeroFile] = useState<File | null>(null);
+  const [heroPreview, setHeroPreview] = useState<string | null>(null);
 
   function set(name: string, value: string) {
     setForm((f) => ({ ...f, [name]: value }));
   }
+
+  function onHeroFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null;
+    setHeroFile(file);
+    if (heroPreview) URL.revokeObjectURL(heroPreview);
+    setHeroPreview(file ? URL.createObjectURL(file) : null);
+  }
+
+  const currentHeroSrc = (() => {
+    if (heroPreview) return heroPreview;
+    const v = form.heroImage ?? "";
+    if (!v) return "";
+    return v.startsWith("/") && site.domain ? `${site.domain}${v}` : v;
+  })();
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -65,6 +81,8 @@ export function SystemSettingsForm({ site }: Props) {
     setResult(null);
     const fd = new FormData();
     for (const [k, v] of Object.entries(form)) fd.set(k, v);
+    if (heroFile) fd.set("heroImage", heroFile);
+    fd.set("heroImageOld", form.heroImage ?? "");
     const res = await saveSystemSettings(fd);
     setResult({
       ok: res.ok,
@@ -100,6 +118,33 @@ export function SystemSettingsForm({ site }: Props) {
             hint="用于站点地图、规范 URL、追踪像素与通知链接。"
             onChange={set}
           />
+        </div>
+      </section>
+
+      <section>
+        <h2 className="text-sm font-bold uppercase tracking-widest text-slate-400">首页横幅图片</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          显示在首页「精密注塑模具，准期交付，次次如一」右侧，支持 jpg / png / webp / gif / avif，最大 4MB。
+        </p>
+        <div className="mt-3">
+          <label htmlFor="heroImage" className={labelCls}>
+            上传图片
+          </label>
+          <input
+            id="heroImage"
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
+            onChange={onHeroFileChange}
+            className="block w-full text-sm text-slate-500 file:mr-3 file:rounded-sm file:border-0 file:bg-accent-500 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-accent-600"
+          />
+          <div className="mt-3 flex items-start gap-4">
+            {currentHeroSrc ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={currentHeroSrc} alt="首页横幅预览" className="h-40 w-full max-w-md rounded-md border border-slate-200 bg-slate-50 object-cover" />
+            ) : (
+              <p className="text-xs text-slate-400">尚未上传图片，首页横幅保持现状。</p>
+            )}
+          </div>
         </div>
       </section>
 

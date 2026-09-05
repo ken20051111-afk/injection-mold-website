@@ -2,6 +2,9 @@
 
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
+import { mkdir, unlink, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/db";
 import { getEmbedding } from "@/lib/openai";
 import { saveSite } from "@/lib/settings";
@@ -195,6 +198,30 @@ function parseLines(value: FormDataEntryValue | null): string[] {
     .filter(Boolean);
 }
 
+const ALLOWED_IMAGE_EXT = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".avif"];
+const MAX_IMAGE_SIZE = 4 * 1024 * 1024;
+
+async function saveHeroImage(file: File): Promise<string> {
+  const ext = path.extname(file.name).toLowerCase();
+  if (!ALLOWED_IMAGE_EXT.includes(ext)) throw new Error("Unsupported image type");
+  if (file.size > MAX_IMAGE_SIZE) throw new Error("Image too large");
+  const dir = path.resolve(process.cwd(), "..", "website", "public", "uploads");
+  await mkdir(dir, { recursive: true });
+  const name = `hero-${randomUUID()}${ext}`;
+  await writeFile(path.join(dir, name), Buffer.from(await file.arrayBuffer()));
+  return `/uploads/${name}`;
+}
+
+async function removeUploaded(url: string): Promise<void> {
+  const name = url.replace(/^\/uploads\//, "");
+  if (!name || name.includes("/") || name.includes("\\")) return;
+  try {
+    await unlink(path.resolve(process.cwd(), "..", "website", "public", "uploads", name));
+  } catch {
+    // ignore missing files
+  }
+}
+
 export async function saveSystemSettings(formData: FormData): Promise<{ ok: boolean; error?: string }> {
   try {
     await requireAdmin();
@@ -202,6 +229,13 @@ export async function saveSystemSettings(formData: FormData): Promise<{ ok: bool
     return { ok: false, error: "未授权" };
   }
   try {
+    const file = formData.get("heroImage");
+    let heroImage = "";
+    if (file && typeof file !== "string") {
+      heroImage = await saveHeroImage(file);
+    } else if (typeof file === "string") {
+      heroImage = file.trim();
+    }
     await saveSite({
       brand: String(formData.get("brand") ?? "").trim(),
       legalName: String(formData.get("legalName") ?? "").trim(),
@@ -221,7 +255,12 @@ export async function saveSystemSettings(formData: FormData): Promise<{ ok: bool
       deliveryRate: parseNumber(formData.get("deliveryRate")),
       defaultLocale: String(formData.get("defaultLocale") ?? "zh").trim(),
       locales: parseLines(formData.get("locales")),
+      heroImage,
     });
+    const oldImage = String(formData.get("heroImageOld") ?? "").trim();
+    if (heroImage && /^\/uploads\//.test(heroImage) && oldImage && oldImage !== heroImage && /^\/uploads\//.test(oldImage)) {
+      await removeUploaded(oldImage);
+    }
     for (const p of ["/", "/sitemap.xml", "/robots.txt", "/manifest.webmanifest"]) {
       revalidatePath(p);
     }
